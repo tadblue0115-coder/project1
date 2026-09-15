@@ -2,6 +2,67 @@ const greetButton = document.querySelector('#greetButton');
 const title = document.querySelector('#title');
 const display = document.querySelector('#display');
 const calculatorKeys = document.querySelector('.calculator-keys');
+const matrixCanvas = document.querySelector('#matrixCanvas');
+
+function startMatrixRain() {
+    if (!matrixCanvas) {
+        return;
+    }
+
+    const context = matrixCanvas.getContext('2d');
+    const characters = '01アイウエオカキクケコサシスセソ<>[]{}/\\#$%';
+    const fontSize = 15;
+    let columns = 0;
+    let drops = [];
+
+    function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        matrixCanvas.width = window.innerWidth * ratio;
+        matrixCanvas.height = window.innerHeight * ratio;
+        matrixCanvas.style.width = `${window.innerWidth}px`;
+        matrixCanvas.style.height = `${window.innerHeight}px`;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        columns = Math.ceil(window.innerWidth / fontSize);
+        drops = Array.from({ length: columns }, () => Math.random() * -40);
+    }
+
+    function draw() {
+        context.fillStyle = 'rgba(2, 8, 5, 0.09)';
+        context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+        context.font = `${fontSize}px monospace`;
+
+        drops.forEach((drop, index) => {
+            const character = characters[Math.floor(Math.random() * characters.length)];
+            const x = index * fontSize;
+            const y = drop * fontSize;
+            context.fillStyle = Math.random() > 0.96 ? '#d7ffe5' : '#20d96b';
+            context.fillText(character, x, y);
+
+            if (y > window.innerHeight && Math.random() > 0.975) {
+                drops[index] = 0;
+            }
+
+            drops[index] += 1;
+        });
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        draw();
+        return;
+    }
+
+    function animate() {
+        draw();
+        window.requestAnimationFrame(animate);
+    }
+
+    animate();
+}
+
+startMatrixRain();
 
 let expression = '';
 
