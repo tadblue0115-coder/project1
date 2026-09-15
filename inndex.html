@@ -3,13 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的第一份 HTML5 文件</title>
+    <title>互動計算機</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <main class="container">
-        <h1 id="title">Hello! HTML5! 捷</h1>
-        <button id="greetButton" type="button">點我互動</button>
+        <header class="intro">
+            <p class="eyebrow">✦  WELCOME  ✦</p>
+            <h1 id="title">互動計算機</h1>
+            <p class="subtitle">簡單、快速，算出每個好點子。</p>
+        </header>
+
+        <section class="calculator" aria-label="計算機">
+            <output id="display" class="display" aria-live="polite">0</output>
+
+            <div class="calculator-keys">
+                <button class="key key-action" type="button" data-action="clear">AC</button>
+                <button class="key key-action" type="button" data-action="delete" aria-label="刪除最後一個字元">⌫</button>
+                <button class="key key-operator" type="button" data-value="/" aria-label="除法">÷</button>
+                <button class="key key-operator" type="button" data-value="*" aria-label="乘法">×</button>
+
+                <button class="key" type="button" data-value="7">7</button>
+                <button class="key" type="button" data-value="8">8</button>
+                <button class="key" type="button" data-value="9">9</button>
+                <button class="key key-operator" type="button" data-value="-" aria-label="減法">−</button>
+
+                <button class="key" type="button" data-value="4">4</button>
+                <button class="key" type="button" data-value="5">5</button>
+                <button class="key" type="button" data-value="6">6</button>
+                <button class="key key-operator" type="button" data-value="+" aria-label="加法">+</button>
+
+                <button class="key" type="button" data-value="1">1</button>
+                <button class="key" type="button" data-value="2">2</button>
+                <button class="key" type="button" data-value="3">3</button>
+                <button class="key key-equals" type="button" data-action="calculate" aria-label="等於">=</button>
+
+                <button class="key key-zero" type="button" data-value="0">0</button>
+                <button class="key" type="button" data-value=".">.</button>
+            </div>
+        </section>
+
+        <button id="greetButton" class="greet-button" type="button">點我互動</button>
     </main>
 
     <script src="script.js"></script>
