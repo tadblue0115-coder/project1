@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動計算機</title>
+    <style>
+        :root {
+            --ink: #d7ffe5;
+            --muted: #72ad88;
+            --accent: #39ff88;
+            --accent-dark: #0dcc5b;
+            --paper: rgba(4, 20, 15, 0.88);
+            --line: rgba(57, 255, 136, 0.42);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1.5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+            background: #020805;
+            color: var(--ink);
+            font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", monospace;
+        }
+
+        body::before,
+        body::after {
+            position: fixed;
+            z-index: -1;
+            width: 20rem;
+            height: 20rem;
+            border-radius: 50%;
+            content: "";
+            filter: blur(70px);
+            opacity: 0.14;
+        }
+
+        body::before {
+            top: -8rem;
+            left: -6rem;
+            background: #0cff72;
+        }
+
+        body::after {
+            right: -8rem;
+            bottom: -10rem;
+            background: #00aaff;
+        }
+
+        #matrixCanvas,
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        #matrixCanvas {
+            z-index: -3;
+            width: 100%;
+            height: 100%;
+            opacity: 0.68;
+        }
+
+        .scanlines {
+            z-index: 5;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(57, 255, 136, 0.035) 0,
+                rgba(57, 255, 136, 0.035) 1px,
+                transparent 1px,
+                transparent 5px
+            );
+            mix-blend-mode: screen;
+        }
+
+        .container {
+            position: relative;
+            width: min(100%, 560px);
+            padding: clamp(2rem, 6vw, 3.5rem) clamp(1.25rem, 6vw, 3.5rem);
+            overflow: hidden;
+            text-align: center;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 2rem;
+            box-shadow: 0 0 0 1px rgba(57, 255, 136, 0.08), 0 0 35px rgba(20, 255, 111, 0.16), 0 28px 70px rgba(0, 0, 0, 0.55);
+            animation: rise-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+            backdrop-filter: blur(12px);
+        }
+
+        .container::before {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0.45rem;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            content: "";
+        }
+
+        .container::after {
+            position: absolute;
+            right: -4rem;
+            bottom: -5rem;
+            width: 12rem;
+            height: 12rem;
+            border: 1px solid rgba(57, 255, 136, 0.15);
+            border-radius: 50%;
+            content: "";
+        }
+
+        .intro {
+            position: relative;
+            z-index: 1;
+        }
+
+        .eyebrow {
+            margin: 0 0 1rem;
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-shadow: 0 0 10px rgba(57, 255, 136, 0.8);
+        }
+
+        h1 {
+            position: relative;
+            z-index: 1;
+            margin: 0 auto 0.5rem;
+            max-width: 14ch;
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            line-height: 1.2;
+            letter-spacing: 0;
+            color: #eafff0;
+            text-shadow: 0 0 8px rgba(57, 255, 136, 0.8), 0 0 28px rgba(57, 255, 136, 0.32);
+            animation: text-flicker 5s infinite;
+        }
+
+        .subtitle {
+            margin: 0 0 1.75rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .calculator {
+            position: relative;
+            z-index: 1;
+            padding: 1rem;
+            border: 1px solid rgba(57, 255, 136, 0.2);
+            border-radius: 1.25rem;
+            background: rgba(0, 10, 6, 0.7);
+            box-shadow: inset 0 0 22px rgba(57, 255, 136, 0.05);
+        }
+
+        .display {
+            display: block;
+            width: 100%;
+            min-height: 4.5rem;
+            margin-bottom: 1rem;
+            padding: 0.7rem 1rem;
+            overflow: hidden;
+            border-radius: 0.9rem;
+            background: #010b06;
+            color: var(--accent);
+            font-size: clamp(1.8rem, 7vw, 2.6rem);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+            text-align: right;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            box-shadow: inset 0 0 18px rgba(57, 255, 136, 0.12), 0 0 12px rgba(57, 255, 136, 0.12);
+            text-shadow: 0 0 12px rgba(57, 255, 136, 0.8);
+        }
+
+        .calculator-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.65rem;
+        }
+
+        .key,
+        .greet-button {
+            position: relative;
+            z-index: 1;
+            min-width: 0;
+            min-height: 3.25rem;
+            padding: 0.75rem;
+            border: 0;
+            border-radius: 0.8rem;
+            background: rgba(11, 42, 26, 0.9);
+            color: var(--ink);
+            font: inherit;
+            font-size: 1.15rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid rgba(57, 255, 136, 0.18);
+            transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
+        }
+
+        .key:hover {
+            background: rgba(24, 92, 51, 0.9);
+            box-shadow: 0 0 16px rgba(57, 255, 136, 0.35);
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+
+        .key:active,
+        .greet-button:active {
+            transform: translateY(0);
+        }
+
+        .key-action {
+            color: #ffde73;
+        }
+
+        .key-operator {
+            background: rgba(21, 65, 40, 0.95);
+            color: var(--accent);
+        }
+
+        .key-equals {
+            grid-row: span 2;
+            background: var(--accent);
+            color: #001e0d;
+            box-shadow: 0 0 18px rgba(57, 255, 136, 0.35);
+        }
+
+        .key-equals:hover,
+        .greet-button:hover {
+            background: #8affb6;
+            box-shadow: 0 0 24px rgba(57, 255, 136, 0.6);
+            transform: translateY(-3px);
+        }
+
+        .key-zero {
+            grid-column: span 2;
+        }
+
+        .greet-button {
+            min-width: 9rem;
+            margin-top: 1.5rem;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--accent);
+            box-shadow: inset 0 0 0 1px rgba(57, 255, 136, 0.55), 0 0 12px rgba(57, 255, 136, 0.12);
+        }
+
+        .key:focus-visible,
+        .greet-button:focus-visible {
+            outline: 3px solid #ffde73;
+            outline-offset: 4px;
+        }
+
+        @media (max-width: 380px) {
+            body {
+                padding: 0.75rem;
+            }
+
+            .container {
+                border-radius: 1.5rem;
+            }
+
+            .calculator {
+                padding: 0.7rem;
+            }
+
+            .calculator-keys {
+                gap: 0.45rem;
+            }
+        }
+
+        @keyframes rise-in {
+            from {
+                opacity: 0;
+                transform: translateY(1.5rem) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes text-flicker {
+            0%,
+            18%,
+            22%,
+            63%,
+            100% {
+                opacity: 1;
+            }
+
+            20%,
+            21%,
+            64% {
+                opacity: 0.78;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 1ms !important;
+                scroll-behavior: auto !important;
+                transition-duration: 1ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+    <div class="scanlines" aria-hidden="true"></div>
+    <main class="container">
+        <header class="intro">
+            <h1 id="title">互動計算機</h1>
+            <p class="subtitle">解碼數字，計算你的下一步。</p>
+        </header>
+
+        <section class="calculator" aria-label="計算機">
+            <output id="display" class="display" aria-live="polite">0</output>
+
+            <div class="calculator-keys">
+                <button class="key key-action" type="button" data-action="clear">AC</button>
+                <button class="key key-action" type="button" data-action="delete" aria-label="刪除最後一個字元">⌫</button>
+                <button class="key key-operator" type="button" data-value="/" aria-label="除法">÷</button>
+                <button class="key key-operator" type="button" data-value="*" aria-label="乘法">×</button>
+
+                <button class="key" type="button" data-value="7">7</button>
+                <button class="key" type="button" data-value="8">8</button>
+                <button class="key" type="button" data-value="9">9</button>
+                <button class="key key-operator" type="button" data-value="-" aria-label="減法">−</button>
+
+                <button class="key" type="button" data-value="4">4</button>
+                <button class="key" type="button" data-value="5">5</button>
+                <button class="key" type="button" data-value="6">6</button>
+                <button class="key key-operator" type="button" data-value="+" aria-label="加法">+</button>
+
+                <button class="key" type="button" data-value="1">1</button>
+                <button class="key" type="button" data-value="2">2</button>
+                <button class="key" type="button" data-value="3">3</button>
+                <button class="key key-equals" type="button" data-action="calculate" aria-label="等於">=</button>
+
+                <button class="key key-zero" type="button" data-value="0">0</button>
+                <button class="key" type="button" data-value=".">.</button>
+            </div>
+        </section>
+
+        <button id="greetButton" class="greet-button" type="button">點我互動</button>
+    </main>
+
+    <script>
+        const greetButton = document.querySelector('#greetButton');
+        const title = document.querySelector('#title');
+        const display = document.querySelector('#display');
+        const calculatorKeys = document.querySelector('.calculator-keys');
+        const matrixCanvas = document.querySelector('#matrixCanvas');
+
+        function startMatrixRain() {
+            if (!matrixCanvas) {
+                return;
+            }
+
+            const context = matrixCanvas.getContext('2d');
+            const characters = '01アイウエオカキクケコサシスセソ<>[]{}/\\#$%';
+            const fontSize = 15;
+            let columns = 0;
+            let drops = [];
+
+            function resizeCanvas() {
+                const ratio = window.devicePixelRatio || 1;
+                matrixCanvas.width = window.innerWidth * ratio;
+                matrixCanvas.height = window.innerHeight * ratio;
+                matrixCanvas.style.width = `${window.innerWidth}px`;
+                matrixCanvas.style.height = `${window.innerHeight}px`;
+                context.setTransform(ratio, 0, 0, ratio, 0, 0);
+                columns = Math.ceil(window.innerWidth / fontSize);
+                drops = Array.from({ length: columns }, () => Math.random() * -40);
+            }
+
+            function draw() {
+                context.fillStyle = 'rgba(2, 8, 5, 0.09)';
+                context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+                context.font = `${fontSize}px monospace`;
+
+                drops.forEach((drop, index) => {
+                    const character = characters[Math.floor(Math.random() * characters.length)];
+                    const x = index * fontSize;
+                    const y = drop * fontSize;
+                    context.fillStyle = Math.random() > 0.96 ? '#d7ffe5' : '#20d96b';
+                    context.fillText(character, x, y);
+
+                    if (y > window.innerHeight && Math.random() > 0.975) {
+                        drops[index] = 0;
+                    }
+
+                    drops[index] += 1;
+                });
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                draw();
+                return;
+            }
+
+            function animate() {
+                draw();
+                window.requestAnimationFrame(animate);
+            }
+
+            animate();
+        }
+
+        startMatrixRain();
+
+        let expression = '';
+
+        function updateDisplay(value = expression || '0') {
+            display.textContent = value;
+        }
+
+        function calculate() {
+            if (!expression || !/[0-9]$/.test(expression)) {
+                return;
+            }
+
+            try {
+                const result = Function(`"use strict"; return (${expression})`)();
+
+                if (!Number.isFinite(result)) {
+                    throw new Error('Invalid result');
+                }
+
+                expression = String(Math.round(result * 1e10) / 1e10);
+                updateDisplay();
+            } catch {
+                expression = '';
+                updateDisplay('錯誤');
+            }
+        }
+
+        if (display && calculatorKeys) {
+            calculatorKeys.addEventListener('click', (event) => {
+                const key = event.target.closest('button');
+
+                if (!key) {
+                    return;
+                }
+
+                const value = key.dataset.value;
+                const action = key.dataset.action;
+
+                if (action === 'clear') {
+                    expression = '';
+                    updateDisplay();
+                    return;
+                }
+
+                if (action === 'delete') {
+                    expression = expression.slice(0, -1);
+                    updateDisplay();
+                    return;
+                }
+
+                if (action === 'calculate') {
+                    calculate();
+                    return;
+                }
+
+                if (value) {
+                    const lastCharacter = expression.at(-1);
+                    const isOperator = /[+\-*/]/.test(value);
+
+                    if (isOperator && /[+\-*/]$/.test(expression)) {
+                        expression = expression.slice(0, -1);
+                    }
+
+                    if (value === '.' && (lastCharacter === '.' || /\.[0-9]*$/.test(expression))) {
+                        return;
+                    }
+
+                    expression += value;
+                    updateDisplay();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (/[0-9+\-*/.]/.test(event.key)) {
+                document.querySelector(`[data-value="${event.key}"]`)?.click();
+            }
+
+            if (event.key === 'Enter' || event.key === '=') {
+                document.querySelector('[data-action="calculate"]')?.click();
+            }
+
+            if (event.key === 'Escape') {
+                document.querySelector('[data-action="clear"]')?.click();
+            }
+
+            if (event.key === 'Backspace') {
+                document.querySelector('[data-action="delete"]')?.click();
+            }
+        });
+
+        if (greetButton && title) {
+            greetButton.addEventListener('click', () => {
+                title.textContent = '你好！很高興見到你！';
+            });
+        }
+    </script>
+</body>
+</html>
